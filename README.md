@@ -2,6 +2,9 @@
 基于开源项目https://github.com/niefy/wx-manage fork而来
 主要改为基于H2数据库，前端端打包在一起，方便部署。
 
+下载
+https://github.com/smalljop/tduck-wx-manage/tags
+
 默认访问地址号： http://localhost:8088/wx/index.html
 默认账号密码： admin/admin
 账号：admin
