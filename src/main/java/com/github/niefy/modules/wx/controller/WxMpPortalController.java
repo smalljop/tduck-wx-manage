@@ -1,5 +1,10 @@
 package com.github.niefy.modules.wx.controller;
 
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
+import com.github.niefy.modules.sys.entity.SysConfigEntity;
+import com.github.niefy.modules.sys.service.SysConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -10,10 +15,17 @@ import me.chanjar.weixin.mp.bean.message.WxMpXmlOutMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 /**
  * 微信消息
+ *
  * @author Binary Wang
  */
 @RequiredArgsConstructor
@@ -23,11 +35,12 @@ import org.springframework.web.bind.annotation.*;
 public class WxMpPortalController {
     private final WxMpService wxService;
     private final WxMpMessageRouter messageRouter;
+    private final SysConfigService sysConfigService;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @GetMapping(produces = "text/plain;charset=utf-8")
-    @ApiOperation(value = "微信服务器的认证消息",notes = "公众号接入开发模式时腾讯调用此接口")
+    @ApiOperation(value = "微信服务器的认证消息", notes = "公众号接入开发模式时腾讯调用此接口")
     public String authGet(@PathVariable String appid,
                           @RequestParam(name = "signature", required = false) String signature,
                           @RequestParam(name = "timestamp", required = false) String timestamp,
@@ -35,7 +48,7 @@ public class WxMpPortalController {
                           @RequestParam(name = "echostr", required = false) String echostr) {
 
         logger.info("\n接收到来自微信服务器的认证消息：[{}, {}, {}, {}]", signature,
-            timestamp, nonce, echostr);
+                timestamp, nonce, echostr);
         if (StringUtils.isAnyBlank(signature, timestamp, nonce, echostr)) {
             throw new IllegalArgumentException("请求参数非法，请核实!");
         }
@@ -49,7 +62,7 @@ public class WxMpPortalController {
     }
 
     @PostMapping(produces = "application/xml; charset=UTF-8")
-    @ApiOperation(value = "微信各类消息",notes = "公众号接入开发模式后才有效")
+    @ApiOperation(value = "微信各类消息", notes = "公众号接入开发模式后才有效")
     public String post(@PathVariable String appid,
                        @RequestBody String requestBody,
                        @RequestParam("signature") String signature,
@@ -65,12 +78,27 @@ public class WxMpPortalController {
         if (!wxService.checkSignature(timestamp, nonce, signature)) {
             throw new IllegalArgumentException("非法请求，可能属于伪造的请求！");
         }
+        try {
+            SysConfigEntity configEntity = sysConfigService.getSysConfig("wxCallBackUrls");
+            String paramValue = configEntity.getParamValue();
+            if (StringUtils.isNoneBlank(paramValue)) {
+                String[] urls = paramValue.split(",");
+                for (String url : urls) {
+                    url = url + "?signature=" + signature + "&timestamp=" + timestamp + "&nonce=" + nonce + "&openid=" + openid + "&encrypt_type=" + encType + "&msg_signature=" + msgSignature;
+                    HttpRequest req = HttpUtil.createPost(url).body(requestBody).header("Content-Type", "application/xml; charset=UTF-8");
+                    HttpResponse execute = req.execute();
+                    logger.debug("回调结果：{}", execute.body());
+                    execute.close();
+                }
+            }
+        } catch (Exception ignored) {
 
+        }
         String out = null;
         if (encType == null) {
             // 明文传输的消息
             WxMpXmlMessage inMessage = WxMpXmlMessage.fromXml(requestBody);
-            WxMpXmlOutMessage outMessage = this.route(appid,inMessage);
+            WxMpXmlOutMessage outMessage = this.route(appid, inMessage);
             if (outMessage == null) {
                 return "";
             }
@@ -79,9 +107,9 @@ public class WxMpPortalController {
         } else if ("aes".equalsIgnoreCase(encType)) {
             // aes加密的消息
             WxMpXmlMessage inMessage = WxMpXmlMessage.fromEncryptedXml(requestBody, wxService.getWxMpConfigStorage(),
-                timestamp, nonce, msgSignature);
+                    timestamp, nonce, msgSignature);
             logger.debug("\n消息解密后内容为：\n{} ", inMessage.toString());
-            WxMpXmlOutMessage outMessage = this.route(appid,inMessage);
+            WxMpXmlOutMessage outMessage = this.route(appid, inMessage);
             if (outMessage == null) {
                 return "";
             }
@@ -90,12 +118,13 @@ public class WxMpPortalController {
         }
 
         logger.debug("\n组装回复信息：{}", out);
+
         return out;
     }
 
-    private WxMpXmlOutMessage route(String appid,WxMpXmlMessage message) {
+    private WxMpXmlOutMessage route(String appid, WxMpXmlMessage message) {
         try {
-            return this.messageRouter.route(appid,message);
+            return this.messageRouter.route(appid, message);
         } catch (Exception e) {
             logger.error("路由消息时出现异常！", e);
         }

@@ -32,8 +32,7 @@ public class WxAccountServiceImpl extends ServiceImpl<WxAccountMapper, WxAccount
     @Autowired
     private WxMpService wxMpService;
 
-    @Autowired
-    private WxRedisOps wxRedisOps;
+
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -47,7 +46,6 @@ public class WxAccountServiceImpl extends ServiceImpl<WxAccountMapper, WxAccount
         return new PageUtils(page);
     }
 
-    @PostConstruct
     public void loadWxMpConfigStorages(){
         log.info("加载公众号配置...");
         List<WxAccount> accountList = this.list();
@@ -101,11 +99,11 @@ public class WxAccountServiceImpl extends ServiceImpl<WxAccountMapper, WxAccount
     }
 
     private WxMpDefaultConfigImpl buildWxMpConfigImpl(WxAccount entity) {
-        WxMpRedisConfigImpl configStorage = new WxMpRedisConfigImpl(wxRedisOps, "v1:wx:mp");
-        configStorage.setAppId(entity.getAppid());
-        configStorage.setSecret(entity.getSecret());
-        configStorage.setToken(entity.getToken());
-        configStorage.setAesKey(entity.getAesKey());
+        WxMpDefaultConfigImpl configStorage = new WxMpDefaultConfigImpl();
+        configStorage.setAppId(entity.getAppid().trim());
+        configStorage.setSecret(entity.getSecret().trim());
+        configStorage.setToken(entity.getToken().trim());
+        configStorage.setAesKey(entity.getAesKey().trim());
         return configStorage;
     }
 

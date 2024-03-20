@@ -14,7 +14,8 @@ debug: false
 
 spring:
   profiles:
-    active: ${PROFILE_ACTIVE:dev} #此处由maven的环境选择决定，参考：https://www.jianshu.com/p/b7c75b0c364c
+    active: h2
+  #    active: ${PROFILE_ACTIVE:dev} #此处由maven的环境选择决定，参考：https://www.jianshu.com/p/b7c75b0c364c
   # jackson时间格式化
   jackson:
     time-zone: GMT+8
@@ -77,6 +78,6 @@ wx:
     autoReplyInterval: 1000
 logging:
   level:
-    me:
-      chanjar: debug
+    com.github.niefy: debug
+#    org.springframework.*: debug
 

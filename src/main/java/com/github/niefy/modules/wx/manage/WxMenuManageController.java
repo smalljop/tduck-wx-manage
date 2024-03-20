@@ -36,7 +36,7 @@ public class WxMenuManageController {
     @GetMapping("/getMenu")
     @ApiOperation(value = "获取公众号菜单")
     public R getMenu(@CookieValue String appid) throws WxErrorException {
-        wxMpService.switchoverTo(appid);
+        wxMpService.switchoverTo(appid.trim());
         WxMpMenu wxMpMenu = wxService.getMenuService().menuGet();
         return R.ok().put(wxMpMenu);
     }

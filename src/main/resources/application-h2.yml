@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./wx_manage
+    username: h2
+    password: h2@wx
+#  sql:
+#    init:
+#      mode: always
+#      schema-locations: classpath:db/schema.sql
+#  sql:
+#    init:
+#      schema-locations: classpath:db/schema.sql
+#  h2:
+#    console:
+#      enabled: true
+
+
+springfox:
+  documentation:
+    swagger-ui:
+      enabled: false
